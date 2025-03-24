@@ -10,9 +10,21 @@
 
 avl_node *path_tree = NULL;
 avl_node *resv_tree = NULL;
+resv_msg *r = NULL;
+path_msg *p = NULL;
 
 char nhip[16];
 extern char src_ip[16], route[16];
+
+void process_path(void *data, int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
+    p = (path_msg*)data;
+    send_path_message(sock, sender_ip, receiver_ip);
+}
+
+void process_resv(void *data, int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
+    r = (resv_msg*)data;
+    send_resv_message(sock, sender_ip, receiver_ip);
+}
 
 // Function to send an RSVP-TE RESV message with label assignment
 void send_resv_message(int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
@@ -26,8 +38,7 @@ void send_resv_message(int sock, struct in_addr sender_ip, struct in_addr receiv
     struct time_object *time_obj = (struct time_object*)(resv_packet + START_SENT_TIME_OBJ);
     struct label_object *label_obj = (struct label_object*)(resv_packet + START_SENT_LABEL);
 
-    fill_resv_tree(resv_tree);
-    fetch_resv_data(100, resv_tree, nhip, &dest_addr, resv, session_obj, hop_obj, time_obj, label_obj);
+    fetch_resv_data(r->tunnel_id, resv_tree, nhip, &dest_addr, resv, session_obj, hop_obj, time_obj, label_obj);
 
     // Send RESV message
     if (sendto(sock, resv_packet, sizeof(resv_packet), 0, 
@@ -71,10 +82,14 @@ void receive_path_message(int sock, char buffer[], struct sockaddr_in sender_add
 	get_nexthop(inet_ntoa(receiver_ip), nhip);
 	if(strcmp(nhip, " ") == 0) {
 		printf("reached the destiantion end os rsvp tunnel\n");
-		send_resv_message(sock, sender_ip, receiver_ip);
+		//send_resv_message(sock, sender_ip, receiver_ip);
+        fill_resv_tree(resv_tree);
+        traverse_avl_tree(resv_tree, process_resv);
 	} else {
 		printf("send path msg nexthop is %s destination not reached\n", nhip);
-		send_path_message(sock, sender_ip, receiver_ip);
+		//send_path_message(sock, sender_ip, receiver_ip);
+        fill_path_tree(path_tree);
+        traverse_avl_tree(path_tree, process_path);
 	}
 /*
     printf("route = %s, nhip = %s, srcip = %s\n", route,inet_ntoa(receiver_ip),src_ip);
@@ -121,7 +136,7 @@ void receive_path_message(int sock, char buffer[], struct sockaddr_in sender_add
 //Function to send PATH message for label request
 void send_path_message(int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
     struct sockaddr_in dest_addr;
-    char path_packet[256];
+    char path_packet[PACKET_SIZE];
 
     struct rsvp_header *path = (struct rsvp_header*)path_packet;
     //struct class_obj *class_obj = (struct class_obj*)(path_packet + START_SENT_CLASS_OBJ); 
@@ -132,8 +147,7 @@ void send_path_message(int sock, struct in_addr sender_ip, struct in_addr receiv
     struct session_attr_object *session_attr_obj = (struct session_attr_object*)(path_packet + START_SENT_SESSION_ATTR_OBJ); 
     struct sender_temp_object *sender_temp_obj = (struct sender_temp_object*)(path_packet + START_SENT_SENDER_TEMP_OBJ);
 
-    fill_path_tree(path_tree);
-    fetch_path_data(100, path_tree, nhip, &dest_addr, path, session_obj, hop_obj, time_obj, label_req_obj, session_attr_obj, sender_temp_obj);
+    fetch_path_data(p->tunnel_id, path_tree, nhip, &dest_addr, path, session_obj, hop_obj, time_obj, label_req_obj, session_attr_obj, sender_temp_obj);
 
     printf(" sending message1 = %d\n",sock);
     // Send PATH message

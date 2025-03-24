@@ -53,19 +53,19 @@ resv_msg* create_resv(int tunnel_id, char *src, char *dest, char *next_hop, uint
 
 void fill_resv_tree(avl_node *resv_tree) {
     /* Insert test data */
-    resv_tree = insert_node(resv_tree, create_resv(100, "192.168.1.1", "192.168.1.2", "192.168.1.3", 5, 10), compare_resv);
-    resv_tree = insert_node(resv_tree, create_resv(50, "192.168.2.1", "192.168.2.2", "192.168.2.3", 3, 20), compare_resv);
-    resv_tree = insert_node(resv_tree, create_resv(150, "192.168.3.1", "192.168.3.2", "192.168.3.3", 7, 15), compare_resv);
-    resv_tree = insert_node(resv_tree, create_resv(75, "192.168.4.1", "192.168.4.2", "192.168.4.3", 2, 25), compare_resv);
+    resv_tree = insert_node(resv_tree, create_resv(100, "192.168.11.10", "192.168.11.11", "192.168.11.11", 5, 10), compare_resv);
+    resv_tree = insert_node(resv_tree, create_resv(50, "192.168.11.11", "192.168.11.10", "192.168.11.10", 3, 20), compare_resv);
+    resv_tree = insert_node(resv_tree, create_resv(150, "1.1.1.1", "2.2.2.2", "2.2.2.2", 7, 15), compare_resv);
+    resv_tree = insert_node(resv_tree, create_resv(75, "2.2.2.2", "1.1.1.1", "1.1.1.1", 2, 25), compare_resv);
     resv_tree = insert_node(resv_tree, create_resv(125, "192.168.5.1", "192.168.5.2", "192.168.5.3", 8, 12), compare_resv);
 }
 
 void fill_path_tree(avl_node *path_tree) {
     /* Insert test data */
-    path_tree = insert_node(path_tree, create_path(100, "192.168.1.1", "192.168.1.2", "192.168.1.3", 5, 10, 2, 3, 0, "Path A"), compare_path);
-    path_tree = insert_node(path_tree, create_path(50, "192.168.2.1", "192.168.2.2", "192.168.2.3", 3, 20, 1, 4, 1, "Path B"), compare_path);
-    path_tree = insert_node(path_tree, create_path(150, "192.168.3.1", "192.168.3.2", "192.168.3.3", 7, 15, 2, 2, 0, "Path C"), compare_path);
-    path_tree = insert_node(path_tree, create_path(75, "192.168.4.1", "192.168.4.2", "192.168.4.3", 2, 25, 3, 1, 1, "Path D"), compare_path);
+    path_tree = insert_node(path_tree, create_path(100, "192.168.11.10", "192.168.11.10", "192.168.11.10", 5, 10, 2, 3, 0, "Path A"), compare_path);
+    path_tree = insert_node(path_tree, create_path(50, "192.168.11.11", "192.168.11.10", "192.168.11.10", 3, 20, 1, 4, 1, "Path B"), compare_path);
+    path_tree = insert_node(path_tree, create_path(150, "1.1.1.1", "2.2.2.2", "2.2.2.2", 7, 15, 2, 2, 0, "Path C"), compare_path);
+    path_tree = insert_node(path_tree, create_path(75, "2.2.2.2", "1.1.1.1", "1.1.1.1", 2, 25, 3, 1, 1, "Path D"), compare_path);
     path_tree = insert_node(path_tree, create_path(125, "192.168.5.1", "192.168.5.2", "192.168.5.3", 8, 12, 2, 3, 0, "Path E"), compare_path);
 }
 

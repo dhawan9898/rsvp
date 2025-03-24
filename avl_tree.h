@@ -28,6 +28,7 @@ static inline int getBalance(avl_node *node) {
 
 /* Function pointer types for customization */
 typedef int (*compare_func)(void *, void *);
+typedef void (*process_func) (void *);
 typedef void (*print_func)(void *);
 typedef void (*free_func)(void *);
 
@@ -36,6 +37,7 @@ avl_node* create_node(void *data);
 avl_node* insert_node(avl_node *root, void *data, compare_func cmp);
 avl_node* delete_node(avl_node *root, void *data, compare_func cmp, free_func free_data);
 avl_node* search_node(avl_node *root, void *data, compare_func cmp);
+void traverse_avl_tree(avl_node *root, process_func proc);
 void display_info(avl_node *root, void *data, compare_func cmp, print_func print);
 void free_tree(avl_node *root, free_func free_data);
 void dump_tree(avl_node *root, int space, print_func print);

@@ -122,6 +122,13 @@ avl_node *search_node(avl_node *root, void *data, compare_func cmp) {
     return (cmp(data, root->data) < 0) ? search_node(root->left, data, cmp) : search_node(root->right, data, cmp);
 }
 
+void traverse_avl_tree(avl_node *root, process_func proc) {
+    if (root == NULL) return;
+    traverse_avl_tree(root->left, proc);
+    proc(root->data);
+    traverse_avl_tree(root->right, proc);
+}
+
 void display_info(avl_node *root, void *data, compare_func cmp, print_func print) {
     avl_node *node = search_node(root, data, cmp);
     if (node) {

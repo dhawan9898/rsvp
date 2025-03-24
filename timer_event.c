@@ -14,7 +14,7 @@ extern struct session* sess;
 extern struct session* path_head;
 extern struct session* resv_head;
 
-#define TIMEOUT 90
+#define TIMEOUT 30
 #define INTERVAL 05
 
 // Timer event handler for Path message
