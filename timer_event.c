@@ -15,7 +15,7 @@ extern struct session* path_head;
 extern struct session* resv_head;
 
 #define TIMEOUT 90
-#define INTERVAL 30
+#define INTERVAL 05
 
 // Timer event handler for Path message
 //it will chk for resv message and if no path message received session will expire

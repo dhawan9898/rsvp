@@ -2,12 +2,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -lrt
 
-# Debug flag (enable with DEBUG=1)
-DEBUG ?= 0
-ifeq ($(DEBUG), 1)
-  CFLAGS += -g
-endif
-
 # Executable names
 SOCKET1_EXEC = socket1
 SOCKET2_EXEC = socket2
@@ -41,10 +35,3 @@ $(SOCKET2_EXEC): $(SRC_SOCKET2) $(HEADERS)
 # Clean target
 clean:
 	rm -f $(SOCKET1_EXEC) $(SOCKET2_EXEC) $(OBJ_SOCKET1) $(OBJ_SOCKET2)
-
-# Debug targets
-debug_socket1:
-	gdb $(SOCKET1_EXEC)
-
-debug_socket2:
-	gdb $(SOCKET2_EXEC)
