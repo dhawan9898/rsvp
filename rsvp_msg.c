@@ -15,52 +15,34 @@ path_msg *p = NULL;
 
 char nhip[16];
 extern char src_ip[16], route[16];
+int sock_val;
 
-void process_path(void *data, int sock, struct in_addr sender_ip, struct in_addr receiver_ip,
-                  struct sockaddr_in *dest_addr,
-                  char path_packet[PACKET_SIZE],
-                  struct rsvp_header *path,
-                  struct session_object *session_obj,
-                  struct hop_object *hop_obj,
-                  struct time_object *time_obj,
-                  struct label_req_objecct *label_req_obj,
-                  struct session_attr_object *session_attr_obj,
-                  struct sender_temp_objeect *sender_temp_obj) {
+void process_path(void *data) {
+    struct sockaddr_in dest_addr;
+    char path_packet[PACKET_SIZE];
+
+    struct rsvp_header *path = (struct rsvp_header*)path_packet;
+    //struct class_obj *class_obj = (struct class_obj*)(path_packet + START_SENT_CLASS_OBJ); 
+    struct session_object *session_obj = (struct session_object*)(path_packet + START_SENT_SESSION_OBJ);
+    struct hop_object *hop_obj = (struct hop_object*)(path_packet + START_SENT_HOP_OBJ);
+    struct time_object *time_obj = (struct time_object*)(path_packet + START_SENT_TIME_OBJ);
+    struct label_req_object *label_req_obj = (struct label_req_object*)(path_packet + START_SENT_LABEL_REQ); 
+    struct session_attr_object *session_attr_obj = (struct session_attr_object*)(path_packet + START_SENT_SESSION_ATTR_OBJ); 
+    struct sender_temp_object *sender_temp_obj = (struct sender_temp_object*)(path_packet + START_SENT_SENDER_TEMP_OBJ);
     p = (path_msg*)data;
     fetch_path_data(p->tunnel_id, path_tree, nhip, &dest_addr, path, session_obj, hop_obj, time_obj, label_req_obj, session_attr_obj, sender_temp_obj);
 
-    printf(" sending message1 = %d\n",sock);
+    printf(" sending message1 = %d\n",sock_val);
     // Send PATH message
-    if (sendto(sock, path_packet, sizeof(path_packet), 0, 
-                (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
+    if (sendto(sock_val, path_packet, sizeof(path_packet), 0, 
+                (struct sockaddr*)&dest_addr, sizeof(p->dest_ip)) < 0) {
         perror("Send failed");
     } else {
-        printf("Sent PATH message to %s\n", inet_ntoa(receiver_ip));
+        printf("Sent PATH message to %s\n", inet_ntoa(p->dest_ip));
     }
 }
 
-void process_resv(void *data, int sock, struct in_addr sender_ip, struct in_addr receiver_ip,
-                  struct sockaddr_in *dest_addr,
-                  char resv_packet[PACKET_SIZE],
-                  struct rsvp_header *resv,
-                  struct session_object *session_obj,
-                  struct hop_object *hop_obj,
-                  struct time_object *time_obj,
-                  struct label_object *label_obj) {
-    r = (resv_msg*)data;
-    fetch_resv_data(r->tunnel_id, resv_tree, nhip, &dest_addr, resv, session_obj, hop_obj, time_obj, label_obj);
-
-    // Send RESV message
-    if (sendto(sock, resv_packet, sizeof(resv_packet), 0, 
-                (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
-        perror("Send failed");
-    } else {
-        printf("Sent RESV message to %s with Label 1001\n", inet_ntoa(sender_ip));
-    }
-}
-
-// Function to send an RSVP-TE RESV message with label assignment
-void send_resv_message(int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
+void process_resv(void *data) {
     struct sockaddr_in dest_addr;
     char resv_packet[PACKET_SIZE];
 
@@ -71,6 +53,21 @@ void send_resv_message(int sock, struct in_addr sender_ip, struct in_addr receiv
     struct time_object *time_obj = (struct time_object*)(resv_packet + START_SENT_TIME_OBJ);
     struct label_object *label_obj = (struct label_object*)(resv_packet + START_SENT_LABEL);
 
+    r = (resv_msg*)data;
+    fetch_resv_data(r->tunnel_id, resv_tree, nhip, &dest_addr, resv, session_obj, hop_obj, time_obj, label_obj);
+
+    // Send RESV message
+    if (sendto(sock_val, resv_packet, sizeof(resv_packet), 0, 
+                (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
+        perror("Send failed");
+    } else {
+        printf("Sent RESV message to %s with Label 1001\n", inet_ntoa(r->src_ip));
+    }
+}
+
+// Function to send an RSVP-TE RESV message with label assignment
+void send_resv_message(int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
+    sock_val = sock;
     fill_resv_tree(resv_tree);
     traverse_avl_tree(resv_tree, process_resv);
 }
@@ -157,20 +154,9 @@ void receive_path_message(int sock, char buffer[], struct sockaddr_in sender_add
 
 //Function to send PATH message for label request
 void send_path_message(int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
-    struct sockaddr_in dest_addr;
-    char path_packet[PACKET_SIZE];
-
-    struct rsvp_header *path = (struct rsvp_header*)path_packet;
-    //struct class_obj *class_obj = (struct class_obj*)(path_packet + START_SENT_CLASS_OBJ); 
-    struct session_object *session_obj = (struct session_object*)(path_packet + START_SENT_SESSION_OBJ);
-    struct hop_object *hop_obj = (struct hop_object*)(path_packet + START_SENT_HOP_OBJ);
-    struct time_object *time_obj = (struct time_object*)(path_packet + START_SENT_TIME_OBJ);
-    struct label_req_object *label_req_obj = (struct label_req_object*)(path_packet + START_SENT_LABEL_REQ); 
-    struct session_attr_object *session_attr_obj = (struct session_attr_object*)(path_packet + START_SENT_SESSION_ATTR_OBJ); 
-    struct sender_temp_object *sender_temp_obj = (struct sender_temp_object*)(path_packet + START_SENT_SENDER_TEMP_OBJ);
-
+    sock_val = sock;
     fill_path_tree(path_tree);
-    traverse_avl_tree(path_tree, process_path);
+    traverse_avl_tree(path_tree, process_path);//fetch_data() / if(tunnel_id or snderip && deestip)
 }
 
 void get_resv_class_obj(int class_obj_arr[]) {
