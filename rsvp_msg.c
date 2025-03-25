@@ -32,8 +32,8 @@ void process_path(void *data) {
 
     printf(" sending message1 = %d\n",sock_val);
     // Send PATH message
-    if (sendto(sock_val, path_packet, sizeof(path_packet), 0, 
-                (struct sockaddr*)&dest_addr, sizeof(p->dest_ip)) < 0) {
+    if (sendto(sock_val, path_packet, PACKET_SIZE, 0, 
+                (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
         perror("Send failed");
     } else {
         printf("Sent PATH message to %s\n", inet_ntoa(p->dest_ip));
@@ -55,7 +55,7 @@ void process_resv(void *data) {
     fetch_resv_data(r->tunnel_id, resv_tree, nhip, &dest_addr, resv, session_obj, hop_obj, time_obj, label_obj);
 
     // Send RESV message
-    if (sendto(sock_val, resv_packet, sizeof(resv_packet), 0, 
+    if (sendto(sock_val, resv_packet, PACKET_SIZE, 0, 
                 (struct sockaddr*)&dest_addr, sizeof(dest_addr)) < 0) {
         perror("Send failed");
     } else {
