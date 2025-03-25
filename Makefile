@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra  -g -lrt
+CFLAGS = -Wall -Wextra -g -lrt
 
 # Executable names
 SOCKET1_EXEC = socket1

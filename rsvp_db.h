@@ -38,8 +38,8 @@ typedef struct resv_msg {
 
 path_msg* create_path(int, char*, char*, char*, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, char*);
 resv_msg* create_resv(int, char*, char*, char*, uint8_t, uint8_t);
-void fill_resv_tree(avl_node*);
-void fill_path_tree(avl_node*);
+avl_node* fill_resv_tree();
+avl_node* fill_path_tree();
 struct session* insert_session(struct session* , char[], char[]);
 struct session* delete_session(struct session* , char[], char[]);
 

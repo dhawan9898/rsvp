@@ -66,7 +66,7 @@ void process_resv(void *data) {
 // Function to send an RSVP-TE RESV message with label assignment
 void send_resv_message(int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
     sock_val = sock;
-    fill_resv_tree(resv_tree);
+    resv_tree = fill_resv_tree();
     traverse_avl_tree(resv_tree, process_resv);
 }
 
@@ -153,7 +153,7 @@ void receive_path_message(int sock, char buffer[], struct sockaddr_in sender_add
 //Function to send PATH message for label request
 void send_path_message(int sock, struct in_addr sender_ip, struct in_addr receiver_ip) {
     sock_val = sock;
-    fill_path_tree(path_tree);
+    path_tree = fill_path_tree();
     traverse_avl_tree(path_tree, process_path);//fetch_data() / if(tunnel_id or snderip && deestip)
 }
 
