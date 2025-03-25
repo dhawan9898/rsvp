@@ -10,8 +10,6 @@
 
 avl_node *path_tree = NULL;
 avl_node *resv_tree = NULL;
-resv_msg *r = NULL;
-path_msg *p = NULL;
 
 char nhip[16];
 extern char src_ip[16], route[16];
@@ -29,7 +27,7 @@ void process_path(void *data) {
     struct label_req_object *label_req_obj = (struct label_req_object*)(path_packet + START_SENT_LABEL_REQ); 
     struct session_attr_object *session_attr_obj = (struct session_attr_object*)(path_packet + START_SENT_SESSION_ATTR_OBJ); 
     struct sender_temp_object *sender_temp_obj = (struct sender_temp_object*)(path_packet + START_SENT_SENDER_TEMP_OBJ);
-    p = (path_msg*)data;
+    path_msg *p = (path_msg*)data;
     fetch_path_data(p->tunnel_id, path_tree, nhip, &dest_addr, path, session_obj, hop_obj, time_obj, label_req_obj, session_attr_obj, sender_temp_obj);
 
     printf(" sending message1 = %d\n",sock_val);
@@ -53,7 +51,7 @@ void process_resv(void *data) {
     struct time_object *time_obj = (struct time_object*)(resv_packet + START_SENT_TIME_OBJ);
     struct label_object *label_obj = (struct label_object*)(resv_packet + START_SENT_LABEL);
 
-    r = (resv_msg*)data;
+    resv_msg *r = (resv_msg*)data;
     fetch_resv_data(r->tunnel_id, resv_tree, nhip, &dest_addr, resv, session_obj, hop_obj, time_obj, label_obj);
 
     // Send RESV message
