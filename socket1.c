@@ -5,13 +5,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/ip.h>
-#include "socket.h"
 #include <linux/if.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <netdb.h>
 #include <net/route.h>
 #include <netinet/in.h>
+#include "socket.h"
 
 char srcip[16];
 char dstip[16];
@@ -19,6 +19,8 @@ struct src_dst_ip *ip = NULL;
 
 struct session* path_head;
 struct session* resv_head;
+extern avl_node *path_tree;
+extern avl_node *resv_tree;
 
 int sock = 0;
 
@@ -83,8 +85,10 @@ int main() {
     
     if(resv_head == NULL) {
 	resv_head = insert_session(resv_head, sender_ip, receiver_ip);
+    resv_tree = insert_resv_node(resv_head->tunnel_id, sender_ip, receiver_ip);
     } else {
         insert_session(resv_head, sender_ip, receiver_ip);
+        resv_tree = insert_resv_node(resv_head->tunnel_id, sender_ip, receiver_ip);
     }
     //---------------------------------------------------------
 
@@ -114,8 +118,10 @@ int main() {
                         printf("insert_path_session\n");
                         if(path_head == NULL) {
                                 path_head = insert_session(path_head, sender_ip, receiver_ip);
+                                path_tree = insert_path_node(path_head->tunnel_id, sender_ip, receiver_ip);
                         } else {
                                 insert_session(path_head, sender_ip, receiver_ip);
+                                path_tree = insert_path_node(path_head->tunnel_id, sender_ip, receiver_ip);
                         }
 
                         receive_path_message(sock,buffer,sender_addr);
@@ -129,8 +135,10 @@ int main() {
                         printf("insert_resv_session\n");
                         if(resv_head == NULL) {
                                 resv_head = insert_session(resv_head, sender_ip, receiver_ip);
+                                resv_tree = insert_resv_node(resv_head->tunnel_id, sender_ip, receiver_ip);
                         } else {
-                                insert_session(resv_head, sender_ip, receiver_ip);
+                            insert_session(resv_head, sender_ip, receiver_ip);
+                            resv_tree = insert_resv_node(resv_head->tunnel_id, sender_ip, receiver_ip);
                         }
 
                         receive_resv_message(sock,buffer,sender_addr);

@@ -14,6 +14,16 @@ int compare_resv(void* a, void* b) {
     return ((resv_msg*)a)->tunnel_id - ((resv_msg*)b)->tunnel_id;
 }
 
+void free_path(void* a) {
+    path_msg *p = (path_msg*)a;
+    free(p);
+}
+
+void free_resv(void* a) {
+    resv_msg *r = (resv_msg*)a;
+    free(r);
+}
+
 /* Function to create a sample path_msg */
 path_msg* create_path(int tunnel_id, char *src, char *dest, char *next_hop, uint8_t IFH, uint8_t time_interval, uint8_t setup_priority, uint8_t hold_priority, uint8_t flags, char *name) {
     path_msg *p = (path_msg*)malloc(sizeof(path_msg));
@@ -71,6 +81,47 @@ avl_node* fill_path_tree() {
     path_tree = insert_node(path_tree, create_path(75, "2.2.2.2", "1.1.1.1", "1.1.1.1", 2, 25, 3, 1, 1, "Path D"), compare_path);
     path_tree = insert_node(path_tree, create_path(125, "192.168.5.1", "192.168.5.2", "192.168.5.3", 8, 12, 2, 3, 0, "Path E"), compare_path);
     return path_tree;
+}
+
+avl_node* insert_path_node(uint8_t tunnel_id, char sender_ip[], char receiver_ip[]){
+    avl_node *path_tree = NULL;
+    char  next_hop[16];
+    get_nexthop(sender_ip, next_hop);
+    path_msg *p = (path_msg*)malloc(sizeof(path_msg));
+    if (!p) {
+        printf("Memory allocation failed!\n");
+        return NULL;
+    }
+    p->tunnel_id = tunnel_id;
+    p->src_ip.s_addr = inet_addr(sender_ip);
+    p->dest_ip.s_addr = inet_addr(receiver_ip);
+    p->next_hop_ip.s_addr = inet_addr(next_hop);
+    p->IFH = 0;
+    p->time_interval = 30;
+    p->setup_priority = 7;
+    p->hold_priority = 7;
+    p->flags = 0;
+    //strncpy(p->name, name, sizeof(p->name) - 1);
+    //p->name[sizeof(p->name) - 1] = '\0';
+    return insert_node(path_tree, p, compare_path);
+}
+
+avl_node* insert_resv_node(uint8_t tunnel_id, char sender_ip[], char receiver_ip[]){
+    avl_node *resv_tree = NULL;
+    char  next_hop[16];
+    get_nexthop(sender_ip, next_hop);
+    path_msg *p = (path_msg*)malloc(sizeof(path_msg));
+    if (!p) {
+        printf("Memory allocation failed!\n");
+        return NULL;
+    }
+    p->tunnel_id = tunnel_id;
+    p->src_ip.s_addr = inet_addr(sender_ip);
+    p->dest_ip.s_addr = inet_addr(receiver_ip);
+    p->next_hop_ip.s_addr = inet_addr(next_hop);
+    p->IFH = 0;
+    p->time_interval = 30;
+    return insert_node(resv_tree, p, compare_resv);
 }
 
 void fetch_resv_data(int tunnel_id, 
