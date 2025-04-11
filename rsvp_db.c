@@ -337,7 +337,7 @@ db_node* path_tree_insert(db_node* path_tree, char buffer[]) {
 
     path_msg *p = malloc(sizeof(path_msg));
 
-    p->tunnel_id = session_obj->tunnel_id;
+    p->tunnel_id = ntohs(session_obj->tunnel_id);
     p->src_ip = (session_obj->src_ip);
     p->dest_ip = (session_obj->dst_ip);
     p->interval = time_obj->interval;
@@ -371,7 +371,7 @@ db_node* resv_tree_insert(db_node* resv_tree, char buffer[]) {
 
     resv_msg *p = malloc(sizeof(resv_msg));
 
-    p->tunnel_id = session_obj->tunnel_id;
+    p->tunnel_id = ntohs(session_obj->tunnel_id);
     p->src_ip = (session_obj->src_ip);
     p->dest_ip = (session_obj->dst_ip);
     p->interval = time_obj->interval;
