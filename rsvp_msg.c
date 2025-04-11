@@ -151,7 +151,6 @@ void send_path_message(int sock, uint16_t tunnel_id, struct in_addr dest_ip) {
     char path_packet[256];
     char nhip[16];
 
-    printf("start of send_path_message\n");
     struct rsvp_header *path = (struct rsvp_header*)path_packet;
     //struct class_obj *class_obj = (struct class_obj*)(path_packet + START_SENT_CLASS_OBJ); 
     struct session_object *session_obj = (struct session_object*)(path_packet + START_SENT_SESSION_OBJ);
@@ -163,7 +162,6 @@ void send_path_message(int sock, uint16_t tunnel_id, struct in_addr dest_ip) {
 
     db_node *path_node = search_node(path_tree, tunnel_id, dest_ip, compare_path_del);
     path_msg *p = (path_msg*)path_node->data;
-    printf("Got path_msg data\n");
 
     // Populate RSVP PATH header
     path->version_flags = 0x10;  // RSVP v1
