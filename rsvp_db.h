@@ -21,12 +21,14 @@ typedef struct path_msg {
     struct in_addr dest_ip;
     struct in_addr nexthop_ip;
     uint16_t tunnel_id;
-    uint8_t IFH;
-    uint8_t interval;
+    uint32_t IFH;
+    uint32_t interval;
+    uint8_t prefix_len;
     uint8_t setup_priority;
     uint8_t hold_priority;
     uint8_t flags;
     uint16_t lsp_id;
+    char     dev[16];
     char name[32];
 } path_msg;
 
@@ -36,11 +38,13 @@ typedef struct resv_msg {
     struct in_addr dest_ip;
     struct in_addr nexthop_ip;
     uint16_t tunnel_id;
-    uint8_t IFH;
-    uint8_t interval;
+    uint32_t IFH;
+    uint32_t interval;
     uint32_t in_label;
     uint32_t out_label;
     uint16_t lsp_id;
+    char     dev[16];
+    uint8_t prefix_len;
 } resv_msg;
 
 typedef struct db_node {
@@ -62,20 +66,20 @@ static inline int get_balance(db_node *node) {
     return node ? get_height(node->left) - get_height(node->right) : 0;
 }
 
-typedef int (*cmp)(uint16_t, struct in_addr, const void *);
+typedef int (*cmp)(struct in_addr , const void *);
 typedef int (*cmp1) (const void*, const void *);
 db_node* insert_node(db_node *, void *, cmp1 func);
-db_node* delete_node(db_node *, uint16_t, struct in_addr, cmp func);
-db_node* search_node(db_node *, uint16_t, struct in_addr, cmp func);
+db_node* delete_node(db_node *, struct in_addr, cmp func, int);
+db_node* search_node(db_node *, struct in_addr, cmp func);
 void free_tree(db_node *);
 void display_tree(db_node *, int);
 
 struct session* insert_session(struct session*, uint8_t, char[], char[], uint8_t);
-struct session* delete_session(struct session*, char[], char[]);
+struct session* delete_session(struct session*, struct session*);
 db_node* path_tree_insert(db_node*, char[]);
-db_node* resv_tree_insert(db_node*, char[]);
-int compare_path_del(uint16_t , struct in_addr , const void *);
-int compare_resv_del(uint16_t , struct in_addr ,const void *);
+db_node* resv_tree_insert(db_node*, char[], uint8_t);
+int compare_path_del(struct in_addr , const void *);
+int compare_resv_del(struct in_addr , const void *);
 int compare_path_insert(const void * , const void *);
 int compare_resv_insert(const void * , const void *);
 

@@ -24,21 +24,15 @@ int sock = 0;
 
 int main() {
 
-    char srcip[16];
-    char dstip[16];
-    char nhip[16];
+    char srcip[16], dstip[16], nhip[16], buffer[512], sender_ip[16], receiver_ip[16];;
     uint16_t tunnel_id;
     int explicit = 0;
-    char buffer[512];
-    struct sockaddr_in sender_addr;
-    socklen_t addr_len = sizeof(sender_addr);
-
-    //struct sockaddr_in dest_addr;
-    struct sockaddr_in addr;
-
-    char sender_ip[16];
-    char receiver_ip[16];
+    struct sockaddr_in sender_addr, addr;
     struct in_addr send_ip, rece_ip;
+    socklen_t addr_len = sizeof(sender_addr);
+    uint32_t ifh;
+    uint8_t prefix_len = 0;
+    char dev[16];
 
     sock = socket(AF_INET, SOCK_RAW, RSVP_PROTOCOL);
     if (sock < 0) {
@@ -58,7 +52,7 @@ int main() {
     // only in PE1 or PE2 where we configure the tunnel for RSVP.
     // ------------------------------------------------------
 
-    for (int i  = 0; i < 2; i++){
+    for (int i  = 0; i < 1; i++){
         printf("Enter tunnel_id: \n");
         scanf("%hd",&tunnel_id);
         getchar();
@@ -83,11 +77,12 @@ int main() {
         path_msg *path = malloc(sizeof(path_msg));
 
         //get and assign nexthop
-        if(get_nexthop(dstip, nhip)) {
+        if(get_nexthop(dstip, nhip, &prefix_len, dev, &ifh)) {
+	    strcpy(path->dev, dev);
+            path->IFH = ifh;
+  	    path->prefix_len = prefix_len;
             if(strcmp(nhip, " ") == 0) {
                 inet_pton(AF_INET, "0.0.0.0", &path->nexthop_ip);
-                printf("dont have route to the destination ip %s\n",inet_ntoa(path->dest_ip));
-                continue;
             } else {
                 inet_pton(AF_INET, nhip, &path->nexthop_ip);
 	    }
@@ -124,7 +119,7 @@ int main() {
         }
 
         // Send RSVP-TE PATH Message
-        send_path_message(sock, path->tunnel_id, rece_ip);
+        send_path_message(sock, path->dest_ip);
     }
     //---------------------------------------------------------
     path_event_handler(); //send path msg

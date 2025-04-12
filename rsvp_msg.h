@@ -37,15 +37,11 @@
 #define START_SENT_SENDER_TEMP_OBJ (START_SENT_SESSION_ATTR_OBJ + sizeof(struct session_attr_object))
 #define START_RECV_SENDER_TEMP_OBJ (IP + START_SENT_SENDER_TEMP_OBJ)
 
-#define PATH_MESSAGE_SIZE (START_SENT_SENDER_TEMP_OBJ + sizeof(struct sender_temp_object))
-
-#define START_SENT_FILTER_SPEC_OBJ (START_SENT_TIME_OBJ + sizeof(struct time_object))
+#define START_SENT_FILTER_SPEC_OBJ (START_SENT_TIME_OBJ + sizeof(struct Filter_spec_object))
 #define START_RECV_FILTER_SPEC_OBJ (IP + START_SENT_FILTER_SPEC_OBJ)
 
-#define START_SENT_LABEL (START_SENT_FILTER_SPEC_OBJ + sizeof(struct Filter_spec_object))
+#define START_SENT_LABEL (START_SENT_FILTER_SPEC_OBJ + sizeof(struct label_object))
 #define START_RECV_LABEL (IP + START_SENT_LABEL) 
-
-#define RESV_MESSAGE_SIZE (START_SENT_LABEL + sizeof(struct label_object) + sizeof(struct style_object))
 
 
 
@@ -141,12 +137,12 @@ struct Filter_spec_object {
 
 
 
-void send_path_message(int, uint16_t, struct in_addr);
-void send_resv_message(int, uint16_t, struct in_addr);
+void send_path_message(int, struct in_addr);
+void send_resv_message(int, struct in_addr);
 void receive_resv_message(int, char[], struct sockaddr_in);
 void receive_path_message(int, char[], struct sockaddr_in);
 void get_resv_class_obj(int[]);
 void get_path_class_obj(int[]);
 int dst_reached(char []);
 void get_ip(char[], char[], char [], uint16_t *);
-extern int get_nexthop(const char *, const char *);
+extern int get_nexthop(const char *, const char *, uint8_t*, const char *, uint32_t*);
