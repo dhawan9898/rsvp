@@ -1,6 +1,7 @@
 #include "rsvp_db.h"
 #include "rsvp_msg.h"
 #include "timer-event.h"
+#include "log.h"
 
 struct session* sess = NULL;
 struct session* head = NULL;
@@ -10,6 +11,16 @@ char source_ip[16];
 char destination_ip[16];
 char next_hop_ip[16];
 char dev[16];
+
+struct session* path_head;
+struct session* resv_head;
+db_node *path_tree;
+db_node *resv_tree;
+
+pthread_mutex_t path_tree_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t resv_tree_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t path_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t resv_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct session* insert_session(struct session* sess, uint8_t t_id, char sender[], char receiver[], uint8_t dest) {
     now = time(NULL);
@@ -76,48 +87,22 @@ struct session* delete_session(struct session* head, struct session* sess) {
 //*****************************************
 
 int compare_path_insert(const void *a, const void *b) {
-    path_msg *pa = (path_msg*)a;
-    path_msg *pb = (path_msg*)b;
-
-    // compare destination IPs
-    if (pa->dest_ip.s_addr < pb->dest_ip.s_addr) return -1;
-    if (pa->dest_ip.s_addr > pb->dest_ip.s_addr) return 1;
-
-    return 0;
+    return (((path_msg*) a)->tunnel_id - ((path_msg*) b)->tunnel_id);
 }
 
 // Comparison function for Resv messages during insertion
 int compare_resv_insert(const void *a, const void *b) {
-    resv_msg *ra = (resv_msg*)a;
-    resv_msg *rb = (resv_msg*)b;
-
-    // compare destination IPs
-    if (ra->dest_ip.s_addr < rb->dest_ip.s_addr) return -1;
-    if (ra->dest_ip.s_addr > rb->dest_ip.s_addr) return 1;
-
-    return 0;
+    return (((resv_msg*) a)->tunnel_id - ((resv_msg*) b)->tunnel_id);
 }
 
 // Comparison function for Path messages during search
-int compare_path_del(struct in_addr dest_ip, const void *b) {
-    path_msg *pb = (path_msg*)b;
-
-    // compare the given destination IP with the node's destination IP
-    if (dest_ip.s_addr < pb->dest_ip.s_addr) return -1;
-    if (dest_ip.s_addr > pb->dest_ip.s_addr) return 1;
-
-    return 0;
+int compare_path_del(uint16_t tunnel_id, const void *b) {
+    return (tunnel_id - ((path_msg*) b)->tunnel_id);
 }
 
 // Comparison function for Resv messages during search
-int compare_resv_del(struct in_addr dest_ip, const void *b) {
-    resv_msg *rb = (resv_msg*)b;
-
-    // compare the given destination IP with the node's destination IP
-    if (dest_ip.s_addr < rb->dest_ip.s_addr) return -1;
-    if (dest_ip.s_addr > rb->dest_ip.s_addr) return 1;
-
-    return 0;
+int compare_resv_del(uint16_t tunnel_id, const void *b) {
+    return (tunnel_id - ((resv_msg*) b)->tunnel_id);
 }
 
 /* Right rotation */
@@ -196,13 +181,13 @@ db_node* min_node(db_node* node) {
 }
 
 /* Delete a node from path_msg AVL tree */
-db_node* delete_node(db_node* node, struct in_addr dest_addr, int (*cmp)(struct in_addr , const void *), int msg) {
+db_node* delete_node(db_node* node, uint16_t tunnel_id, int (*cmp)(uint16_t , const void *), uint8_t msg) {
     if (node == NULL) return NULL;
 
-    if (cmp(dest_addr, node->data) < 0)
-        node->left = delete_node(node->left, dest_addr, cmp, msg);
-    else if (cmp(dest_addr, node->data) > 0) 
-        node->right = delete_node(node->right, dest_addr, cmp, msg);
+    if (cmp(tunnel_id, node->data) < 0)
+        node->left = delete_node(node->left, tunnel_id, cmp, msg);
+    else if (cmp(tunnel_id, node->data) > 0) 
+        node->right = delete_node(node->right, tunnel_id, cmp, msg);
     else {
         // Node with only one child or no child
         if ((node->left == NULL) || (node->right == NULL)) {
@@ -223,9 +208,9 @@ db_node* delete_node(db_node* node, struct in_addr dest_addr, int (*cmp)(struct 
             db_node* temp = min_node(node->right);
             node->data = temp->data;
             if(msg)
-                node->right = delete_node(node->right, ((path_msg *)temp->data)->dest_ip, cmp, msg);
+                node->right = delete_node(node->right, ((path_msg *)temp->data)->tunnel_id, cmp, msg);
             else
-                node->right = delete_node(node->right, ((resv_msg *)temp->data)->dest_ip, cmp, msg);
+                node->right = delete_node(node->right, ((resv_msg *)temp->data)->tunnel_id, cmp, msg);
         }
     }
 
@@ -253,7 +238,7 @@ db_node* delete_node(db_node* node, struct in_addr dest_addr, int (*cmp)(struct 
 
 
 /* Search for a path_msg node */
-db_node* search_node(db_node *node, struct in_addr data, int (*cmp)(struct in_addr, const void *)) {
+db_node* search_node(db_node *node, uint16_t data, int (*cmp)(uint16_t, const void *)) {
     if (node == NULL) {
         return node;
     }
@@ -276,10 +261,50 @@ void free_tree(db_node *node) {
     free(node);
 }
 
+void display_tree(db_node *node, uint8_t msg, char *buffer, size_t buffer_size) {
+    if (node == NULL) return;
+
+    // In-order traversal: left, root, right
+    display_tree(node->left, msg, buffer, buffer_size);
+
+    char temp[256];
+    size_t current_len = strlen(buffer);
+    size_t remaining_size = buffer_size - current_len;
+
+    if (remaining_size <= 1) return; // No space left (leave room for null terminator)
+
+    if (msg) { // PATH tree (msg == 1)
+        path_msg *p = (path_msg*)node->data;
+        //log_message("display tree dest ip %s", inet_ntoa(p->dest_ip));
+        inet_ntop(AF_INET, &p->src_ip, source_ip, 16);
+        inet_ntop(AF_INET, &p->dest_ip, destination_ip, 16);
+        inet_ntop(AF_INET, &p->nexthop_ip, next_hop_ip, 16);
+        snprintf(temp, sizeof(temp), 
+                 "Tunnel ID: %d, Src: %s, Dst: %s, NextHop: %s, Name: %s\n",
+                 p->tunnel_id, source_ip, destination_ip,
+                 next_hop_ip, p->name);
+    } else { // RESV tree (msg == 0)
+        resv_msg *r = (resv_msg*)node->data;
+        inet_ntop(AF_INET, &r->src_ip, source_ip, 16);
+        inet_ntop(AF_INET, &r->dest_ip, destination_ip, 16);
+        inet_ntop(AF_INET, &r->nexthop_ip, next_hop_ip, 16);
+        snprintf(temp, sizeof(temp),
+                "Tunnel ID: %u, Src: %s, Dest: %s, Next Hop: %s, In_label: %d, Out_label: %d\n",
+                r->tunnel_id, source_ip, destination_ip, next_hop_ip, ntohl(r->in_label),
+                ntohl(r->out_label));
+    }
+
+    // Append to buffer, ensuring we don't overflow
+    strncat(buffer, temp, remaining_size - 1);
+    buffer[buffer_size - 1] = '\0'; // Ensure null termination
+
+    display_tree(node->right, msg, buffer, buffer_size);
+}
+
 /* Display path tree (inorder traversal) */
-void display_tree(db_node *node, int msg) {
+void display_tree_debug(db_node *node, uint8_t msg) {
     if (!node) return;
-    display_tree(node->left, msg);
+    display_tree_debug(node->left, msg);
     if(msg) {
         path_msg* p = node->data;
         inet_ntop(AF_INET, &p->src_ip, source_ip, 16);
@@ -301,10 +326,10 @@ void display_tree(db_node *node, int msg) {
                 destination_ip,
                 next_hop_ip,
                 r->prefix_len,
-                ntohl(r->in_label),
-                ntohl(r->out_label));
+                (r->in_label),
+                (r->out_label));
     }
-    display_tree(node->right, msg);
+    display_tree_debug(node->right, msg);
 }
 
 //Fetch information from receive buffer
@@ -321,7 +346,7 @@ db_node* path_tree_insert(db_node* path_tree, char buffer[]) {
 
     path_msg *p = malloc(sizeof(path_msg));
 
-    p->tunnel_id = session_obj->tunnel_id;
+    p->tunnel_id = htons(session_obj->tunnel_id);
     p->src_ip = (session_obj->src_ip);
     p->dest_ip = (session_obj->dst_ip);
     p->interval = time_obj->interval;
@@ -363,14 +388,14 @@ db_node* resv_tree_insert(db_node* resv_tree, char buffer[], uint8_t dst_reach) 
 
     resv_msg *p = malloc(sizeof(resv_msg));
 
-    p->tunnel_id = session_obj->tunnel_id;
+    p->tunnel_id = ntohs(session_obj->tunnel_id);
     p->src_ip = (session_obj->src_ip);
     p->dest_ip = (session_obj->dst_ip);
     p->interval = time_obj->interval;
 
     if(dst_reach) {
-        p->in_label = htonl(3);
-        p->out_label = htonl(-1);
+        p->in_label = (3);
+        p->out_label = (-1);
 	p->prefix_len = prefix_len;
     }
 
@@ -381,16 +406,16 @@ db_node* resv_tree_insert(db_node* resv_tree, char buffer[], uint8_t dst_reach) 
         p->prefix_len = prefix_len;
 	printf("prefix_len = %d\n", prefix_len);
         if(!dst_reach) {
-                p->out_label = label_obj->label;
+                p->out_label = ntohl(label_obj->label);
         }
         if(strcmp(nhip, " ") == 0) {
             if(!dst_reach)
-                p->in_label = htonl(-1);
+                p->in_label = (-1);
             inet_pton(AF_INET, "0.0.0.0", &p->nexthop_ip);
         }
         else {
             if(!dst_reach)
-                p->in_label = htonl(100);
+                p->in_label = allocate_label();
             inet_pton(AF_INET, nhip, &p->nexthop_ip);
         }
     } else {

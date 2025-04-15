@@ -5,6 +5,8 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include<time.h>
+#include<pthread.h>
+#include<unistd.h>
 
 struct session {
     char sender[16];
@@ -66,20 +68,23 @@ static inline int get_balance(db_node *node) {
     return node ? get_height(node->left) - get_height(node->right) : 0;
 }
 
-typedef int (*cmp)(struct in_addr , const void *);
+typedef int (*cmp)(uint16_t , const void *);
 typedef int (*cmp1) (const void*, const void *);
 db_node* insert_node(db_node *, void *, cmp1 func);
-db_node* delete_node(db_node *, struct in_addr, cmp func, int);
-db_node* search_node(db_node *, struct in_addr, cmp func);
+db_node* delete_node(db_node *, uint16_t, cmp func, uint8_t);
+db_node* search_node(db_node *, uint16_t, cmp func);
 void free_tree(db_node *);
-void display_tree(db_node *, int);
+void display_tree_debug(db_node *, uint8_t);
+void display_tree(db_node * , uint8_t , char * , size_t);
 
 struct session* insert_session(struct session*, uint8_t, char[], char[], uint8_t);
 struct session* delete_session(struct session*, struct session*);
 db_node* path_tree_insert(db_node*, char[]);
 db_node* resv_tree_insert(db_node*, char[], uint8_t);
-int compare_path_del(struct in_addr , const void *);
-int compare_resv_del(struct in_addr , const void *);
+int compare_path_del(uint16_t , const void *);
+int compare_resv_del(uint16_t , const void *);
 int compare_path_insert(const void * , const void *);
 int compare_resv_insert(const void * , const void *);
 
+extern uint32_t allocate_label (void);
+extern uint8_t free_label (uint32_t);
