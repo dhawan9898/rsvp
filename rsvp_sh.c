@@ -1,3 +1,4 @@
+#include <sys/un.h>
 #include "rsvp_db.h"
 #include "rsvp_msg.h"
 #include "timer-event.h"
@@ -258,7 +259,7 @@ path_msg* create_path(const char *args, char *response, size_t response_size) {
 
 int rsvpsh_main() {
     int sock;
-    struct sockaddr_in addr;
+    struct sockaddr_un addr;
     char input[256], response[MAX_BUFFER];
     int in_config_mode = 0;
 
@@ -291,9 +292,9 @@ int rsvpsh_main() {
             continue;
         }
 
-        /*memset(&addr, 0, sizeof(addr));
-        addr.sin_family = AF_INET;
-        strncpy(addr.sin_addr, SOCKET_PATH, sizeof(addr.sin_addr) - 1);*/
+        memset(&addr, 0, sizeof(addr));
+        addr.sun_family = AF_UNIX;
+        strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
 
         if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
             perror("Connection to daemon failed");

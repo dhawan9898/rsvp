@@ -7,28 +7,18 @@
 #include "rsvp_db.h"
 #include "rsvp_sh.h"
 
-extern void rsvpd_main();
+extern int rsvpd_main();
 int main(int argc, char *argv[]) {
     char *prog_name = strrchr(argv[0], '/');
     if (prog_name) prog_name++; else prog_name = argv[0];
 
-    pid_t pid = fork();
-    if (pid < 0) {
-        perror("Fork failed");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pid == 0) { // Child
-        if (strcmp(prog_name, "rsvpd") == 0) {
-            rsvpd_main();
-        } else if (strcmp(prog_name, "rsvpsh") == 0) {
-            rsvpsh_main();
-        } else {
-            printf("Run as 'rsvpd' or 'rsvpsh' (e.g., via symlink)\n");
-            exit(EXIT_FAILURE);
-        }
+    if (strcmp(prog_name, "rsvpd") == 0) {
+        return rsvpd_main();
+    } else if (strcmp(prog_name, "rsvpsh") == 0) {
+        return rsvpsh_main();
     } else {
-        wait(NULL); // Optional
+        fprintf(stderr, "Run as 'rsvpd' or 'rsvpsh' (e.g., via symlink)\n");
+        return EXIT_FAILURE;
     }
     return 0;
 }
