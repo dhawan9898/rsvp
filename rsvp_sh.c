@@ -79,7 +79,7 @@ int rsvp_add_config(const char* args, char* response, size_t response_size) {
     log_message("Calling insert_session for tunnel %d", path->tunnel_id);
 
     if(resv_head == NULL) {
-        resv_head = insert_session(resv_head, ipath->tunnel_id, sender_ip, receiver_ip, 1);
+        resv_head = insert_session(resv_head, path->tunnel_id, sender_ip, receiver_ip, 1);
     } else {
         insert_session(resv_head, path->tunnel_id, sender_ip, receiver_ip, 1);
     } 
