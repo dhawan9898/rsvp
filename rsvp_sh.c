@@ -74,12 +74,15 @@ int rsvp_add_config(const char* args, char* response, size_t response_size) {
 
     // Add to path_head for timer refreshes
     char sender_ip[16], receiver_ip[16];
-    strncpy(sender_ip, inet_ntoa(path->src_ip), sizeof(sender_ip));
-    strncpy(receiver_ip, inet_ntoa(path->dest_ip), sizeof(receiver_ip));
-    sender_ip[sizeof(sender_ip) - 1] = '\0';
-    receiver_ip[sizeof(receiver_ip) - 1] = '\0';
+    inet_ntop(AF_INET, &path->src_ip, sender_ip, 16);
+    inet_ntop(AF_INET, &path->dest_ip, receiver_ip, 16); 
     log_message("Calling insert_session for tunnel %d", path->tunnel_id);
-    path_head = insert_session(path_head, path->tunnel_id, sender_ip, receiver_ip, 1);
+
+    if(resv_head == NULL) {
+        resv_head = insert_session(resv_head, ipath->tunnel_id, sender_ip, receiver_ip, 1);
+    } else {
+        insert_session(resv_head, path->tunnel_id, sender_ip, receiver_ip, 1);
+    } 
     log_message("dest ip/receiver ip %s", receiver_ip);
     log_message("insert_session completed for tunnel %d", path->tunnel_id);
 
