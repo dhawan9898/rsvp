@@ -24,11 +24,11 @@ pthread_mutex_t resv_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct session* insert_session(struct session* sess, uint8_t t_id, char sender[], char receiver[], uint8_t dest) {
     now = time(NULL);
-    printf("insert session\n");
+    log_message("insert session\n");
     if(sess == NULL) {
         struct session *temp = (struct session*)malloc(sizeof(struct session));
         if(temp < 0)
-            printf("cannot allocate dynamic memory]n");
+            log_message("cannot allocate dynamic memory]n");
 
         temp->last_path_time = now;
         strcpy(temp->sender, sender);
@@ -51,7 +51,7 @@ struct session* insert_session(struct session* sess, uint8_t t_id, char sender[]
 
         struct session *temp = (struct session*)malloc(sizeof(struct session));
         if(sess < 0)
-            printf("cannot allocate dynamic memory\n");
+            log_message("cannot allocate dynamic memory\n");
 
         temp->last_path_time = now;
         strcpy(temp->sender, sender);
@@ -69,7 +69,7 @@ struct session* delete_session(struct session* head, struct session* sess) {
 
     struct session *temp = NULL;
 
-    printf("delete session\n");
+    log_message("delete session\n");
        if(head == sess) { 
             temp = head;
             head = head->next;
@@ -132,7 +132,7 @@ db_node* left_rotate(db_node *x) {
 db_node* create_node(void *data) {
     db_node *node = (db_node*)malloc(sizeof(db_node));
     if (!node) {
-        printf("Memory allocation failed!\n");
+        log_message("Memory allocation failed!\n");
         return NULL;
     }
     node->data = data;
@@ -279,7 +279,7 @@ void display_tree(db_node *node, uint8_t msg, char *buffer, size_t buffer_size) 
         inet_ntop(AF_INET, &p->src_ip, source_ip, 16);
         inet_ntop(AF_INET, &p->dest_ip, destination_ip, 16);
         inet_ntop(AF_INET, &p->nexthop_ip, next_hop_ip, 16);
-        snprintf(temp, sizeof(temp), 
+        log_message(temp, sizeof(temp), 
                  "Tunnel ID: %d, Src: %s, Dst: %s, NextHop: %s, Name: %s\n",
                  p->tunnel_id, source_ip, destination_ip,
                  next_hop_ip, p->name);
@@ -288,7 +288,7 @@ void display_tree(db_node *node, uint8_t msg, char *buffer, size_t buffer_size) 
         inet_ntop(AF_INET, &r->src_ip, source_ip, 16);
         inet_ntop(AF_INET, &r->dest_ip, destination_ip, 16);
         inet_ntop(AF_INET, &r->nexthop_ip, next_hop_ip, 16);
-        snprintf(temp, sizeof(temp),
+        log_message(temp, sizeof(temp),
                 "Tunnel ID: %u, Src: %s, Dest: %s, Next Hop: %s, In_label: %d, Out_label: %d\n",
                 r->tunnel_id, source_ip, destination_ip, next_hop_ip, ntohl(r->in_label),
                 ntohl(r->out_label));
@@ -310,7 +310,7 @@ void display_tree_debug(db_node *node, uint8_t msg) {
         inet_ntop(AF_INET, &p->src_ip, source_ip, 16);
         inet_ntop(AF_INET, &p->dest_ip, destination_ip, 16);
         inet_ntop(AF_INET, &p->nexthop_ip, next_hop_ip, 16);
-        printf("Tunnel ID: %u, Src: %s, Dest: %s, Next Hop: %s\n",
+        log_message("Tunnel ID: %u, Src: %s, Dest: %s, Next Hop: %s\n",
                 p->tunnel_id,
                 source_ip,
                 destination_ip,
@@ -320,7 +320,7 @@ void display_tree_debug(db_node *node, uint8_t msg) {
         inet_ntop(AF_INET, &r->src_ip, source_ip, 16);
         inet_ntop(AF_INET, &r->dest_ip, destination_ip, 16);
         inet_ntop(AF_INET, &r->nexthop_ip, next_hop_ip, 16);
-        printf("Tunnel ID: %u, Src: %s, Dest: %s, Next Hop: %s, prefix_len: %d, In_label: %d, Out_label: %d\n",
+        log_message("Tunnel ID: %u, Src: %s, Dest: %s, Next Hop: %s, prefix_len: %d, In_label: %d, Out_label: %d\n",
                 r->tunnel_id,
                 source_ip,
                 destination_ip,
@@ -369,7 +369,7 @@ db_node* path_tree_insert(db_node* path_tree, char buffer[]) {
             p->prefix_len = prefix_len;
         }
     } else {
-        printf("No route to destination\n");
+        log_message("No route to destination\n");
         return NULL;
     }
 
@@ -404,7 +404,7 @@ db_node* resv_tree_insert(db_node* resv_tree, char buffer[], uint8_t dst_reach) 
         strcpy(p->dev, dev);
         p->IFH = ifh;
         p->prefix_len = prefix_len;
-	printf("prefix_len = %d\n", prefix_len);
+	log_message("prefix_len = %d\n", prefix_len);
         if(!dst_reach) {
                 p->out_label = ntohl(label_obj->label);
         }
@@ -419,7 +419,7 @@ db_node* resv_tree_insert(db_node* resv_tree, char buffer[], uint8_t dst_reach) 
             inet_pton(AF_INET, nhip, &p->nexthop_ip);
         }
     } else {
-        printf("No route to Source\n");
+        log_message("No route to Source\n");
         return NULL;
     }
 

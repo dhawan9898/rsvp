@@ -55,11 +55,11 @@ void* receive_thread(void* arg) {
                 //Receive PATH Message
                 resv_event_handler();
                 // get ip from the received path packet
-                printf(" in path msg type\n");
+                log_message(" in path msg type\n");
                 get_ip(buffer, sender_ip, receiver_ip, &tunnel_id);
                 reached = dst_reached(receiver_ip);
 
-                printf("insert_path_session\n");
+                log_message("insert_path_session\n");
                 pthread_mutex_lock(&path_list_mutex);
                 if(path_head == NULL) {
                     path_head = insert_session(path_head, tunnel_id, sender_ip, receiver_ip,reached);
@@ -73,11 +73,11 @@ void* receive_thread(void* arg) {
                 // Receive RSVP-TE RESV Message	
                 path_event_handler();
                 //get ip from the received resv msg
-                printf(" in resv msg type\n");
+                log_message(" in resv msg type\n");
                 get_ip(buffer, sender_ip, receiver_ip, &tunnel_id);
                 reached = dst_reached(sender_ip);
 
-                printf("insert_resv_session\n");
+                log_message("insert_resv_session\n");
                 pthread_mutex_lock(&resv_list_mutex);
                 if(resv_head == NULL) {
                     resv_head = insert_session(resv_head, tunnel_id, sender_ip, receiver_ip, reached);
@@ -90,7 +90,7 @@ void* receive_thread(void* arg) {
                 break;
             default: {
                 char msg[64];
-                snprintf(msg, sizeof(msg), "Unknown RSVP message type: %d", rsvp->msg_type);
+                log_message(msg, sizeof(msg), "Unknown RSVP message type: %d", rsvp->msg_type);
                 log_message(msg);
             }
         }
@@ -151,7 +151,7 @@ void* ipc_server_thread(void* arg) {
             } else if (strncmp(buffer, "delete ", 7) == 0) {
                 rsvp_delete_config(buffer + 7, response, sizeof(response));
             } else {
-                snprintf(response, sizeof(response), "Unknown command\n");
+                log_message(response, sizeof(response), "Unknown command\n");
             }
             
             send(client_sock, response, strlen(response), 0);

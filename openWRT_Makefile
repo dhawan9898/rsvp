@@ -1,0 +1,35 @@
+include $(TOPDIR)/rules.mk
+ 
+PKG_NAME:=rsvp
+PKG_VERSION:=1.0
+PKG_RELEASE:=1
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
+ 
+include $(INCLUDE_DIR)/package.mk
+ 
+define Package/rsvp
+  SECTION:=net
+  CATEGORY:=Network
+  TITLE:=RSVP Daemon
+  DEPENDS:=+libstdcpp
+endef
+ 
+define Package/rsvpd1/description
+  This is RSVPD for OpenWrt.
+endef
+ 
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)/
+endef
+ 
+define Build/Compile
+	$(TARGET_CC) $(TARGET_CFLAGS) -g -o $(PKG_BUILD_DIR)/rsvp $(PKG_BUILD_DIR)/rsvp_main.c $(PKG_BUILD_DIR)/rsvpd.c $(PKG_BUILD_DIR)/rsvp_sh.c $(PKG_BUILD_DIR)/rsvp_msg.c $(PKG_BUILD_DIR)/rsvp_db.c $(PKG_BUILD_DIR)/route_dump.c $(PKG_BUILD_DIR)/timer_event.c $(PKG_BUILD_DIR)/label_mgt.c $(PKG_BUILD_DIR)/log.c -lrt
+endef
+ 
+define Package/rsvp/install
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rsvp $(1)/usr/bin/
+endef
+ 
+$(eval $(call BuildPackage,rsvp))
