@@ -76,13 +76,10 @@ int rsvp_add_config(const char* args, char* response, size_t response_size) {
     char sender_ip[16], receiver_ip[16];
     inet_ntop(AF_INET, &path->src_ip, sender_ip, 16);
     inet_ntop(AF_INET, &path->dest_ip, receiver_ip, 16); 
+    
     log_message("Calling insert_session for tunnel %d", path->tunnel_id);
-
-    if(resv_head == NULL) {
-        resv_head = insert_session(resv_head, path->tunnel_id, sender_ip, receiver_ip, 1);
-    } else {
-        insert_session(resv_head, path->tunnel_id, sender_ip, receiver_ip, 1);
-    } 
+    resv_head = insert_session(resv_head, path->tunnel_id, sender_ip, receiver_ip, 1);
+    
     log_message("dest ip/receiver ip %s", receiver_ip);
     log_message("insert_session completed for tunnel %d", path->tunnel_id);
 
@@ -157,6 +154,7 @@ path_msg* create_path(const char *args, char *response, size_t response_size) {
     path->src_ip.s_addr = 0;
     path->dest_ip.s_addr = 0;
     path->nexthop_ip.s_addr = 0;
+    inet_pton(AF_INET, "0.0.0.0", &path->p_nexthop_ip);
     path->interval = 30;
     path->setup_priority = 7;
     path->hold_priority = 7;

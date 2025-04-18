@@ -35,6 +35,7 @@ void* receive_thread(void* arg) {
     socklen_t addr_len = sizeof(sender_addr);
     char buffer[512];
     int reached = 0;
+    struct session* temp = NULL;
 
     while (1) {
         memset(buffer, 0, sizeof(buffer));
@@ -52,47 +53,55 @@ void* receive_thread(void* arg) {
         log_message("Mutex locked in receive_thread");
         switch (rsvp->msg_type) {
             case PATH_MSG_TYPE:
+
                 //Receive PATH Message
                 resv_event_handler();
+
                 // get ip from the received path packet
                 log_message(" in path msg type\n");
                 get_ip(buffer, sender_ip, receiver_ip, &tunnel_id);
-                reached = dst_reached(receiver_ip);
+                temp = search_session(path_head, tunnel_id);
+		if(temp == NULL) {
+			reached = dst_reached(receiver_ip);
 
-                log_message("insert_path_session\n");
-                pthread_mutex_lock(&path_list_mutex);
-                if(path_head == NULL) {
-                    path_head = insert_session(path_head, tunnel_id, sender_ip, receiver_ip,reached);
-                } else {
-                    insert_session(path_head, tunnel_id, sender_ip, receiver_ip, reached);
-                }
-                pthread_mutex_unlock(&path_list_mutex);
+			pthread_mutex_lock(&path_list_mutex);
+	                path_head = insert_session(path_head, tunnel_id, sender_ip, receiver_ip, reached);
+                	pthread_mutex_unlock(&path_list_mutex);
+		}
+		temp = NULL;
+                
                 receive_path_message(sock,buffer,sender_addr);
-                break;
+               
+		break;
+
             case RESV_MSG_TYPE:
+
                 // Receive RSVP-TE RESV Message	
                 path_event_handler();
+
                 //get ip from the received resv msg
                 log_message(" in resv msg type\n");
-                get_ip(buffer, sender_ip, receiver_ip, &tunnel_id);
-                reached = dst_reached(sender_ip);
+		get_ip(buffer, sender_ip, receiver_ip, &tunnel_id);
+                temp = search_session(resv_head, tunnel_id);
+                if(temp == NULL) {
+                        reached = dst_reached(sender_ip);
 
-                log_message("insert_resv_session\n");
-                pthread_mutex_lock(&resv_list_mutex);
-                if(resv_head == NULL) {
-                    resv_head = insert_session(resv_head, tunnel_id, sender_ip, receiver_ip, reached);
-                } else {
-                    insert_session(resv_head, tunnel_id, sender_ip, receiver_ip, reached);
+                        pthread_mutex_lock(&resv_list_mutex);
+                        resv_head = insert_session(resv_head, tunnel_id, sender_ip, receiver_ip, reached);
+                        pthread_mutex_unlock(&resv_list_mutex);
                 }
-                pthread_mutex_unlock(&resv_list_mutex);
-
+		temp = NULL;
+                
                 receive_resv_message(sock,buffer,sender_addr);
-                break;
+                
+ 		break;
+
             default: {
+
                 char msg[64];
-                log_message(msg, sizeof(msg), "Unknown RSVP message type: %d", rsvp->msg_type);
+                snprintf(msg, sizeof(msg), "Unknown RSVP message type: %d", rsvp->msg_type);
                 log_message(msg);
-            }
+	    }
         }
         log_message("Mutex unlocking in receive_thread");
     }
@@ -151,7 +160,7 @@ void* ipc_server_thread(void* arg) {
             } else if (strncmp(buffer, "delete ", 7) == 0) {
                 rsvp_delete_config(buffer + 7, response, sizeof(response));
             } else {
-                log_message(response, sizeof(response), "Unknown command\n");
+                snprintf(response, sizeof(response), "Unknown command\n");
             }
             
             send(client_sock, response, strlen(response), 0);

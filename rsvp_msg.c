@@ -123,7 +123,7 @@ void receive_path_message(int sock, char buffer[], struct sockaddr_in sender_add
     pthread_mutex_lock(&path_tree_mutex);
     db_node *path_node = search_node(path_tree, ntohs(session_obj->tunnel_id), compare_path_del);
     if(path_node == NULL){
-        temp = path_tree_insert(path_tree, buffer);
+        temp = path_tree_insert(path_tree, buffer, sender_addr.sin_addr);
         if(temp != NULL) {
             path_tree = temp;
             path_node = search_node(path_tree, ntohs(session_obj->tunnel_id), compare_path_del);
@@ -140,7 +140,7 @@ void receive_path_message(int sock, char buffer[], struct sockaddr_in sender_add
             pthread_mutex_lock(&resv_tree_mutex);
             db_node *resv_node = search_node(resv_tree, ntohs(session_obj->tunnel_id), compare_resv_del);
             if(resv_node == NULL){
-                temp = resv_tree_insert(resv_tree, buffer, 1);
+                temp = resv_tree_insert(resv_tree, buffer, p->p_nexthop_ip, 1);
                 if(temp != NULL) {
                     resv_tree = temp;
                 }
@@ -216,7 +216,7 @@ void send_path_message(int sock, uint16_t tunnel_id) {
 
     //session attribute object for PATH msg
     session_attr_obj->class_obj.class_num = 207;
-    session_attr_obj->class_obj.c_type = 1;
+    session_attr_obj->class_obj.c_type = 7;
     session_attr_obj->class_obj.length = htons(sizeof(struct session_attr_object));
     session_attr_obj->setup_prio = p->setup_priority;
     session_attr_obj->hold_prio = p->hold_priority;
@@ -276,10 +276,23 @@ void receive_resv_message(int sock, char buffer[], struct sockaddr_in sender_add
     log_message("Received RESV message from %s with Label %d\n",
             inet_ntoa(sender_addr.sin_addr), ntohl(label_obj->label));
 
+    pthread_mutex_lock(&path_tree_mutex);
+    path_msg *p = NULL;
+    db_node *path_node = search_node(path_tree, ntohs(session_obj->tunnel_id), compare_path_del);
+    if(path_node == NULL){
+	log_message(" not found path table entry for tunnel id  = %d\n", ntohs(session_obj->tunnel_id));
+	log_message(" return as we cannot get nexthop for the resv\n");
+	return;
+    } else {
+	p = (path_msg*)path_node->data;
+    }
+    pthread_mutex_unlock(&path_tree_mutex);
+	
+
     pthread_mutex_lock(&resv_tree_mutex);
     db_node *resv_node = search_node(resv_tree, ntohs(session_obj->tunnel_id), compare_resv_del);
     if(resv_node == NULL){
-        temp = resv_tree_insert(resv_tree, buffer, 0);
+        temp = resv_tree_insert(resv_tree, buffer, p->p_nexthop_ip, 0);
         if(temp != NULL) {
             resv_tree = temp;
             resv_node = search_node(resv_tree, ntohs(session_obj->tunnel_id), compare_resv_del);
@@ -304,23 +317,22 @@ void receive_resv_message(int sock, char buffer[], struct sockaddr_in sender_add
         inet_ntop(AF_INET, &pa->dest_ip, d_ip, 16);
         inet_ntop(AF_INET, &pa->nexthop_ip, n_ip, 16);
 
-
         if(strcmp(inet_ntoa(p->nexthop_ip),"0.0.0.0") == 0) {
             log_message("****reached the source, end oF rsvp tunnel***\n");
 
-            log_message(command, sizeof(command), "ip route add %s/%d encap mpls %d via %s dev %s",
+            snprintf(command, sizeof(command), "ip route add %s/%d encap mpls %d via %s dev %s",
                     d_ip, p->prefix_len, (p->out_label), n_ip, pa->dev);
 
             log_message(" ========== 1 %s \n", command);
             system(command);
         } else {
             if(p->out_label == 3) {
-                log_message(command, sizeof(command), "ip -M route add %d via inet %s dev %s",
+                snprintf(command, sizeof(command), "ip -M route add %d via inet %s dev %s",
                         (p->in_label), n_ip, pa->dev);
                 log_message(" ========== 2 %s - ", command);
                 system(command);
             } else {
-                log_message(command, sizeof(command), "ip -M route add %d as %d via inet %s",
+                snprintf(command, sizeof(command), "ip -M route add %d as %d via inet %s",
                         (p->in_label), (p->out_label), n_ip);
                 log_message(" ========== 3 %s - ", command);
                 system(command);
@@ -335,7 +347,11 @@ void receive_resv_message(int sock, char buffer[], struct sockaddr_in sender_add
 int dst_reached(char ip[]) {
 
     char nhip[16];
-    //get_nexthop(ip, nhip);
+    uint32_t ifh = 0;
+    uint8_t prefix_len = 0;
+    char dev[16];
+
+    get_nexthop(ip, nhip, &prefix_len, dev, &ifh); 
     //log_message("next hop is %s\n", nhip);
     if(strcmp(nhip, " ") == 0)
         return 1;

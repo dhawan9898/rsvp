@@ -33,6 +33,7 @@ void delete_timer(timer_t *timer_id) {
         perror("timer delete failed\n");
         exit(EXIT_FAILURE);
     }
+    timer_id = 0;
     log_message(" timer delete sucessfully %p \n", timer_id);
 }
 
@@ -51,16 +52,16 @@ void path_timer_handler(union sigval sv) {
     while(temp != NULL) {
 
         if(temp->dest) {
-            log_message("--------sending  path message\n");
             send_path_message(sock, temp->tunnel_id);
         }
-
 
         if((now - temp->last_path_time) > TIMEOUT) {
             if(!temp->dest) {
                 log_message("RSVP path session expired: %s\t-->%s\n",temp->sender, temp->receiver);
                 resv_head = delete_session(resv_head, temp);
             }
+	    //<path tear message>
+	    update_tables(path_tree, resv_tree, temp->tunnel_id);
             resv_tree = delete_node(resv_tree, temp->tunnel_id, compare_resv_del, 0);
             display_tree_debug(resv_tree, 0);
         } else if((now - temp->last_path_time) < INTERVAL) {
@@ -73,14 +74,14 @@ void path_timer_handler(union sigval sv) {
         temp = temp->next;
     }
     pthread_mutex_unlock(&resv_list_mutex);
-    if(resv_head == NULL) {
+    /*if(resv_head == NULL) {
         if(sv.sival_ptr == NULL)
             return;
 
         timer_t *id = (timer_t*)sv.sival_ptr;
         delete_timer(id);
         sv.sival_ptr = NULL;
-    }
+    }*/
 }
 
 //Timer event handler for seding RESV message
@@ -115,14 +116,14 @@ void resv_timer_handler(union sigval sv) {
         temp = temp->next;
     }
     pthread_mutex_unlock(&path_list_mutex);
-    if(path_head == NULL) {
+    /*if(path_head == NULL) {
         if(sv.sival_ptr == NULL)
             return;
 
         timer_t *id = (timer_t*)sv.sival_ptr;	
         delete_timer(id);
         sv.sival_ptr = NULL;
-    }
+    }*/
 }
 
 // Function to create a timer that triggers every 30 seconds
@@ -157,7 +158,7 @@ void start_timer(timer_t timerid) {
     }
 }
 
-int is_timer_active(timer_t *timer) {
+/*int is_timer_active(timer_t *timer) {
     struct itimerspec ts;
     if(*timer == 0)
         return 0;
@@ -168,24 +169,23 @@ int is_timer_active(timer_t *timer) {
         *timer = 0;
         return 0;
     }
-}
+}*/
 
 void path_event_handler() {
-    if(is_timer_active(&path_timer)) {
+/*    if(is_timer_active(&path_timer)) {
         return;
     }
+*/
     path_timer = create_timer(path_timer_handler);
     start_timer(path_timer);
 }
 
 void resv_event_handler() {
-    log_message("entered resv handler\n");
-    if(is_timer_active(&resv_timer)) {
+/*    if(is_timer_active(&resv_timer)) {
         return;
     }
-    log_message("creating new resv handler\n");
+*/
     resv_timer = create_timer(resv_timer_handler);
-    log_message("starting resv handler\n");
     start_timer(resv_timer);
 }
 
